@@ -67,11 +67,12 @@ router.post(
     });
 
     const emailVerification = await issueVerification(user);
-    setSessionCookie(response, user, rememberRequested(request.body?.remember));
+    const token = setSessionCookie(response, user, rememberRequested(request.body?.remember));
 
     response.status(201).json({
       success: true,
       message: "Account created successfully. Verify your email to enter the store.",
+      token,
       user: userView(user),
       emailVerification,
     });
@@ -107,11 +108,12 @@ router.post(
     (user as any).lockUntil = undefined;
     user.lastLoginAt = new Date();
     await user.save({ validateBeforeSave: false });
-    setSessionCookie(response, user, rememberRequested(request.body?.remember));
+    const token = setSessionCookie(response, user, rememberRequested(request.body?.remember));
 
     response.json({
       success: true,
       message: user.isEmailVerified ? "Login successful." : "Login successful. Verify your email to enter the store.",
+      token,
       user: userView(user),
     });
   })
@@ -173,8 +175,8 @@ router.put(
     user.authProvider = "local";
     (user as any).tokenVersion = Number((user as any).tokenVersion || 0) + 1;
     await user.save();
-    setSessionCookie(response, user, true);
-    response.json({ success: true, message: "Password changed successfully." });
+    const token = setSessionCookie(response, user, true);
+    response.json({ success: true, message: "Password changed successfully.", token });
   })
 );
 
@@ -220,9 +222,9 @@ router.put(
     user.passwordResetExpires = undefined;
     (user as any).tokenVersion = Number((user as any).tokenVersion || 0) + 1;
     await user.save();
-    setSessionCookie(response, user, true);
+    const token = setSessionCookie(response, user, true);
 
-    response.json({ success: true, message: "Password reset successfully.", user: userView(user) });
+    response.json({ success: true, message: "Password reset successfully.", token, user: userView(user) });
   })
 );
 
@@ -261,8 +263,8 @@ router.post(
       await user.save({ validateBeforeSave: false });
     }
 
-    setSessionCookie(response, user, rememberRequested(request.body?.remember));
-    response.json({ success: true, message: "Google authentication successful.", user: userView(user) });
+    const token = setSessionCookie(response, user, rememberRequested(request.body?.remember));
+    response.json({ success: true, message: "Google authentication successful.", token, user: userView(user) });
   })
 );
 
@@ -297,8 +299,8 @@ router.post(
     const token = String(request.body?.token || "");
     if (!token) throw new HttpError(400, "Verification token is required.");
     const user = await verifyEmailToken(token);
-    setSessionCookie(response, user, true);
-    response.json({ success: true, message: "Email verified successfully.", user: userView(user) });
+    const sessionToken = setSessionCookie(response, user, true);
+    response.json({ success: true, message: "Email verified successfully.", token: sessionToken, user: userView(user) });
   })
 );
 
@@ -306,8 +308,8 @@ router.get(
   "/verify-email/:token",
   asyncHandler(async (request, response) => {
     const user = await verifyEmailToken(request.params.token);
-    setSessionCookie(response, user, true);
-    response.json({ success: true, message: "Email verified successfully.", user: userView(user) });
+    const token = setSessionCookie(response, user, true);
+    response.json({ success: true, message: "Email verified successfully.", token, user: userView(user) });
   })
 );
 
